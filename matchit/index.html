@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MatchIt — Drag & Drop Quiz</title>
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/animations.css">
+</head>
+<body>
+
+<div class="bg-grid" aria-hidden="true"></div>
+<div class="bg-blob bg-blob--purple" aria-hidden="true"></div>
+<div class="bg-blob bg-blob--cyan" aria-hidden="true"></div>
+<canvas id="confetti-canvas" aria-hidden="true"></canvas>
+
+<!-- START SCREEN -->
+<div class="start-screen" id="start-screen" role="dialog" aria-modal="true">
+  <div class="start-card">
+    <span class="start-card__icon">🧩</span>
+    <h2 class="start-card__title">Listo para jugar?</h2>
+    <p class="start-card__sub">Arrastra cada respuesta a la pregunta correcta. El temporizador comienza al presionar Iniciar.</p>
+    <div class="start-card__info">
+      <div class="start-info-stat">
+        <div class="start-info-stat__num" id="start-q-count">0</div>
+        <div class="start-info-stat__label">Preguntas</div>
+      </div>
+      <div class="start-info-stat">
+        <div class="start-info-stat__num" id="start-timer-val">Sin limite</div>
+        <div class="start-info-stat__label">Tiempo</div>
+      </div>
+    </div>
+    <button class="btn btn--accent btn--sm start-card__btn" id="btn-start-game">Iniciar juego</button>
+  </div>
+</div>
+
+<main class="app">
+  <!-- Header -->
+  <header class="header">
+    <div class="logo">
+      Match<span class="logo__accent">It</span>
+      <span class="logo__tag">Drag &amp; Drop Quiz</span>
+    </div>
+    <nav class="header__actions">
+      <button class="btn btn--ghost btn--sm" id="btn-download-template">Plantilla</button>
+      <button class="btn btn--ghost btn--sm" id="btn-load">Cargar</button>
+      <button class="btn btn--ghost btn--sm" id="btn-edit">Editar</button>
+      <button class="btn btn--ghost btn--sm" id="btn-timer-config">Tiempo</button>
+      <button class="btn btn--accent btn--sm" id="btn-shuffle">Mezclar</button>
+    </nav>
+  </header>
+
+  <!-- Timer bar -->
+  <div class="timer" id="timer-wrap" style="display:none">
+    <div>
+      <div class="timer__display timer__display--normal" id="timer-display">00:00</div>
+    </div>
+    <div class="timer__track-wrap">
+      <div class="timer__label" id="timer-label">Tiempo restante</div>
+      <div class="timer__track"><div class="timer__fill" id="timer-fill" style="width:100%"></div></div>
+    </div>
+    <div class="timer__controls">
+      <button class="btn btn--ghost btn--sm btn--icon" id="timer-btn-play">pause</button>
+      <button class="btn btn--ghost btn--sm btn--icon" id="timer-btn-reset">reset</button>
+    </div>
+  </div>
+
+  <!-- Score bar -->
+  <div class="score-bar">
+    <div class="score-stat">
+      <div class="score-stat__num score-stat__num--correct" id="sc-correct">0</div>
+      <div class="score-stat__label">Correctas</div>
+    </div>
+    <div class="score-divider"></div>
+    <div class="score-stat">
+      <div class="score-stat__num score-stat__num--wrong" id="sc-wrong">0</div>
+      <div class="score-stat__label">Incorrectas</div>
+    </div>
+    <div class="score-divider"></div>
+    <div class="score-stat">
+      <div class="score-stat__num score-stat__num--total" id="sc-total">0</div>
+      <div class="score-stat__label">Total</div>
+    </div>
+    <div class="score-divider"></div>
+    <div class="score-progress">
+      <div class="score-progress__label">
+        <span>Emparejados</span><span id="progress-label-pct">0%</span>
+      </div>
+      <div class="score-progress__track">
+        <div class="score-progress__fill" id="progress-fill"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Empty state -->
+  <section id="empty-state" class="empty-state">
+    <span class="empty-state__icon">🧩</span>
+    <h2 class="empty-state__title">No hay preguntas cargadas</h2>
+    <p class="empty-state__sub">Descarga la plantilla CSV, rellena tus pares pregunta-respuesta y vuelve a cargarla. O prueba con los datos de demo.</p>
+    <div class="empty-state__actions">
+      <button class="btn btn--accent" id="btn-download-template-2">Descargar plantilla</button>
+      <button class="btn btn--cyan"   id="btn-load-2">Cargar archivo</button>
+      <button class="btn btn--ghost"  id="btn-demo">Demo</button>
+    </div>
+  </section>
+
+  <!-- Game area -->
+  <section id="game-wrap" style="display:none">
+    <div class="game-area">
+      <div>
+        <h3 class="col-title">Preguntas</h3>
+        <div id="questions-col"></div>
+      </div>
+      <div>
+        <h3 class="col-title">Respuestas</h3>
+        <div id="answers-col"></div>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="btn btn--success" id="btn-check">Verificar</button>
+      <button class="btn btn--ghost"   id="btn-reset">Reintentar</button>
+      <button class="btn btn--ghost"   id="btn-shuffle-ctrl">Mezclar</button>
+    </div>
+    <section class="feedback-panel" id="feedback-panel">
+      <h3 class="feedback-panel__title" id="feedback-title"></h3>
+      <div id="feedback-items"></div>
+    </section>
+  </section>
+</main>
+
+<!-- MODAL: Load -->
+<div class="modal-overlay" id="modal-load" role="dialog" aria-modal="true">
+  <div class="modal">
+    <h2 class="modal__title">Cargar preguntas</h2>
+    <p class="modal__sub">Sube un archivo CSV (columnas: pregunta, respuesta).</p>
+    <div class="file-drop-area" id="file-drop-area">
+      <input type="file" id="file-input" accept=".csv">
+      <span class="file-drop-area__icon">📄</span>
+      <p class="file-drop-area__text"><strong>Haz clic o arrastra</strong> tu archivo .csv aqui</p>
+    </div>
+    <div id="preview-area" style="display:none">
+      <p style="font-size:.78rem;color:var(--text-muted);margin-bottom:6px">Vista previa:</p>
+      <div class="preview-table-wrap">
+        <table class="preview-table">
+          <thead><tr><th>#</th><th>Pregunta</th><th>Respuesta</th></tr></thead>
+          <tbody id="preview-body"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="modal__actions">
+      <button class="btn btn--accent" id="load-confirm-btn" style="display:none">Cargar</button>
+      <button class="btn btn--ghost"  id="load-cancel-btn">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Edit -->
+<div class="modal-overlay" id="modal-edit" role="dialog" aria-modal="true">
+  <div class="modal">
+    <h2 class="modal__title">Editar preguntas</h2>
+    <p class="modal__sub">Modifica los pares directamente aqui.</p>
+    <div id="edit-pairs"></div>
+    <button class="btn btn--ghost btn--sm" id="btn-add-pair" style="margin-top:10px">+ Agregar par</button>
+    <div class="modal__actions">
+      <button class="btn btn--accent" id="edit-save-btn">Guardar y jugar</button>
+      <button class="btn btn--ghost"  id="edit-cancel-btn">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Timer -->
+<div class="modal-overlay" id="modal-timer" role="dialog" aria-modal="true">
+  <div class="modal">
+    <h2 class="modal__title">Temporizador</h2>
+    <p class="modal__sub">Configura el tiempo limite. Al expirar, se verifican las respuestas automaticamente.</p>
+    <div class="timer-toggle-row" style="margin-bottom:24px">
+      <div>
+        <div class="timer-toggle-label">Activar temporizador</div>
+        <div class="timer-toggle-sub">Si se activa, el juego verifica al expirar</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="timer-enabled-toggle">
+        <span class="toggle__track"></span>
+      </label>
+    </div>
+    <div class="modal__section">
+      <div class="modal__section-title">Presets rapidos</div>
+      <div class="timer-presets">
+        <button class="timer-preset" data-secs="30">30s</button>
+        <button class="timer-preset" data-secs="60">1 min</button>
+        <button class="timer-preset" data-secs="120" >2 min</button>
+        <button class="timer-preset" data-secs="180">3 min</button>
+        <button class="timer-preset" data-secs="300">5 min</button>
+        <button class="timer-preset" data-secs="600">10 min</button>
+      </div>
+    </div>
+    <div class="modal__section">
+      <div class="modal__section-title">Tiempo personalizado</div>
+      <div class="timer-custom">
+        <label for="timer-custom-input">Minutos:</label>
+        <input type="number" id="timer-custom-input" min="1" max="120" value="2">
+      </div>
+    </div>
+    <div class="modal__actions">
+      <button class="btn btn--accent" id="timer-modal-save">Aplicar</button>
+      <button class="btn btn--ghost"  id="timer-modal-cancel">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
