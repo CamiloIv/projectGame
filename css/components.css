@@ -593,3 +593,30 @@
 }
 .start-info-stat__label { font-size: .72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
 .start-card__btn  { width: 100%; padding: 14px; font-size: 1rem; border-radius: var(--r-lg); justify-content: center; }
+
+/* ─────────────────────────────────────────────
+   START SCREEN — timer config inline
+   ───────────────────────────────────────────── */
+.start-timer-config {
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: var(--sp-md) var(--sp-lg);
+  margin-bottom: var(--sp-lg);
+  text-align: left;
+}
+
+.start-timer-config__title {
+  display: flex;
+  align-items: center;
+  font-size: .9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.start-timer-options {
+  margin-top: var(--sp-md);
+  padding-top: var(--sp-md);
+  border-top: 1px solid var(--border);
+  animation: feedbackIn .2s ease;
+}

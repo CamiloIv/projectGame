@@ -31,7 +31,7 @@ export function hideStartScreen() {
 }
 
 // ── Visibility ─────────────────────────────────────────
-export function showGameArea() {
+export function showGameArea() { // no-op, always visible
   document.getElementById('empty-state').style.display = 'none';
   document.getElementById('game-wrap').style.display   = 'block';
 }

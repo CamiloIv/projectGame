@@ -1,16 +1,14 @@
 /**
  * main.js — Application bootstrap
- * Composition root: conecta todos los módulos, cero lógica propia.
  */
 
 import { State, reshuffle, stopTimer } from './state.js';
-import { parseCSV, downloadTemplate, DEMO_PAIRS, DEFAULT_PAIRS } from './data.js';
+import { parseCSV, downloadTemplate, DEFAULT_PAIRS } from './data.js';
 import { initGame, resetGame, shuffleAnswers, checkAnswers } from './game.js';
 import { initTimer, renderTimer, beginCountdown } from './timer.js';
 import {
   showToast, openModal, closeModal,
   showStartScreen, hideStartScreen,
-  showGameArea, showEmptyState,
   renderPreview,
   renderEditPairs, addEditPairRow, getEditPairs,
   updateScoreBar,
@@ -19,39 +17,39 @@ import {
 // ── Bootstrap ──────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   initTimer({ onExpire: handleTimerExpire });
-  wireAllButtons();
-  wireAllModals();
+  wireButtons();
+  wireModals();
   wireFileDrop();
-  wireTimerConfig();
-  loadPairs([...DEFAULT_PAIRS]);
+  wireStartScreen();
+
+  // Carga los pares por defecto y muestra la pantalla de inicio
+  loadPairs([...DEFAULT_PAIRS], { showStart: true });
 });
 
 // ── Buttons ────────────────────────────────────────────
-function wireAllButtons() {
-  // Header
+function wireButtons() {
   on('btn-download-template', 'click', () => { downloadTemplate(); showToast('✅ Plantilla descargada'); });
   on('btn-load',              'click', () => openModal('modal-load'));
   on('btn-edit',              'click', () => { renderEditPairs(State.pairs); openModal('modal-edit'); });
-  on('btn-timer-config',      'click', () => { syncTimerModalUI(); openModal('modal-timer'); });
-  on('btn-shuffle',           'click', () => { if (!State.pairs.length) return; shuffleAnswers(); showToast('🔀 Mezcladas'); });
 
-  // Empty state
-  on('btn-download-template-2', 'click', () => { downloadTemplate(); showToast('✅ Plantilla descargada'); });
-  on('btn-load-2',              'click', () => openModal('modal-load'));
-  on('btn-demo',                'click', () => loadPairs([...DEMO_PAIRS]));
+  // "Jugar" en el header → muestra start screen de nuevo
+  on('btn-play-again', 'click', () => {
+    resetGame();
+    stopTimer();
+    State.timer.remaining = State.timer.totalSecs;
+    State.timer.expired   = false;
+    renderTimer();
+    showStartScreen();
+  });
 
   // In-game controls
-  on('btn-check',       'click', () => checkAnswers());
-  on('btn-reset',       'click', handleReset);
-  on('btn-shuffle-ctrl','click', () => { shuffleAnswers(); showToast('🔀 Mezcladas'); });
-
-  // Start screen
-  on('btn-start-game', 'click', () => { hideStartScreen(); beginCountdown(); });
+  on('btn-check',        'click', () => checkAnswers());
+  on('btn-reset',        'click', handleReset);
+  on('btn-shuffle-ctrl', 'click', () => { shuffleAnswers(); showToast('🔀 Mezcladas'); });
 }
 
 // ── Modals ─────────────────────────────────────────────
-function wireAllModals() {
-  // Close on overlay click
+function wireModals() {
   document.querySelectorAll('.modal-overlay').forEach(overlay => {
     overlay.addEventListener('click', e => {
       if (e.target === overlay) overlay.classList.remove('modal-overlay--open');
@@ -60,26 +58,20 @@ function wireAllModals() {
 
   // Load modal
   on('load-confirm-btn', 'click', () => {
-    if (!State.fileData || !State.fileData.length) return;
-    loadPairs(State.fileData);
+    if (!State.fileData?.length) return;
+    loadPairs(State.fileData, { showStart: true });
     closeModal('modal-load');
   });
   on('load-cancel-btn', 'click', () => closeModal('modal-load'));
 
   // Edit modal
-  on('btn-add-pair',   'click', () => addEditPairRow());
-  on('edit-save-btn',  'click', handleEditSave);
-  on('edit-cancel-btn','click', () => closeModal('modal-edit'));
-
-  // Delegated remove inside edit modal
+  on('btn-add-pair',    'click', () => addEditPairRow());
+  on('edit-save-btn',   'click', handleEditSave);
+  on('edit-cancel-btn', 'click', () => closeModal('modal-edit'));
   document.getElementById('edit-pairs').addEventListener('click', e => {
     const btn = e.target.closest('.edit-pair__remove');
     if (btn) btn.closest('.edit-pair').remove();
   });
-
-  // Timer modal
-  on('timer-modal-save',   'click', handleTimerSave);
-  on('timer-modal-cancel', 'click', () => closeModal('modal-timer'));
 }
 
 // ── File drop ──────────────────────────────────────────
@@ -112,48 +104,53 @@ function handleFile(file) {
   reader.readAsText(file);
 }
 
-// ── Timer config ───────────────────────────────────────
-function wireTimerConfig() {
-  const presets = document.querySelectorAll('.timer-preset');
+// ── Start screen con timer config ──────────────────────
+function wireStartScreen() {
+  const toggle   = document.getElementById('start-timer-toggle');
+  const options  = document.getElementById('start-timer-options');
+  const presets  = document.querySelectorAll('#start-screen .timer-preset');
+  const customIn = document.getElementById('start-timer-custom');
 
+  // Toggle muestra/oculta opciones
+  toggle.addEventListener('change', () => {
+    State.timer.enabled = toggle.checked;
+    options.style.display = toggle.checked ? 'block' : 'none';
+    updateStartTimerDisplay();
+  });
+
+  // Presets
   presets.forEach(btn => {
     btn.addEventListener('click', () => {
       presets.forEach(b => b.classList.remove('timer-preset--active'));
       btn.classList.add('timer-preset--active');
       State.timer.totalSecs = parseInt(btn.dataset.secs);
-      document.getElementById('timer-custom-input').value = Math.floor(State.timer.totalSecs / 60) || 1;
+      customIn.value = Math.floor(State.timer.totalSecs / 60) || 1;
+      updateStartTimerDisplay();
     });
   });
 
-  document.getElementById('timer-custom-input').addEventListener('input', e => {
-    const mins = Math.max(1, Math.min(120, parseInt(e.target.value) || 1));
+  // Custom input
+  customIn.addEventListener('input', () => {
+    const mins = Math.max(1, Math.min(120, parseInt(customIn.value) || 1));
     State.timer.totalSecs = mins * 60;
     presets.forEach(b => b.classList.remove('timer-preset--active'));
+    updateStartTimerDisplay();
   });
 
-  document.getElementById('timer-enabled-toggle').addEventListener('change', e => {
-    State.timer.enabled = e.target.checked;
+  // Botón jugar
+  on('btn-start-game', 'click', () => {
+    State.timer.remaining = State.timer.totalSecs;
+    State.timer.expired   = false;
+    renderTimer();
+    hideStartScreen();
+    beginCountdown();
   });
 }
 
-function handleTimerSave() {
-  State.timer.remaining = State.timer.totalSecs;
-  State.timer.expired   = false;
-  renderTimer();
-  closeModal('modal-timer');
-  const msg = State.timer.enabled
-    ? `⏱ Temporizador: ${fmtSecs(State.timer.totalSecs)}`
-    : '⏱ Temporizador desactivado';
-  showToast(msg);
-}
-
-function syncTimerModalUI() {
-  document.getElementById('timer-enabled-toggle').checked = State.timer.enabled;
-  const mins = Math.floor(State.timer.totalSecs / 60) || 1;
-  document.getElementById('timer-custom-input').value = mins;
-  document.querySelectorAll('.timer-preset').forEach(btn => {
-    btn.classList.toggle('timer-preset--active', parseInt(btn.dataset.secs) === State.timer.totalSecs);
-  });
+function updateStartTimerDisplay() {
+  const t = State.timer;
+  document.getElementById('start-timer-val').textContent =
+    t.enabled ? fmtSecs(t.totalSecs) : 'Sin límite';
 }
 
 // ── Handlers ───────────────────────────────────────────
@@ -169,7 +166,7 @@ function handleReset() {
 function handleEditSave() {
   const pairs = getEditPairs();
   if (pairs.length < 2) { showToast('⚠️ Necesitas al menos 2 pares'); return; }
-  loadPairs(pairs);
+  loadPairs(pairs, { showStart: true });
   closeModal('modal-edit');
 }
 
@@ -179,25 +176,32 @@ function handleTimerExpire() {
 }
 
 // ── Core loader ────────────────────────────────────────
-function loadPairs(pairs) {
+function loadPairs(pairs, { showStart = false } = {}) {
   State.pairs    = pairs;
   State.fileData = null;
 
-  // Reset timer state
   stopTimer();
   State.timer.remaining = State.timer.totalSecs;
   State.timer.expired   = false;
   renderTimer();
 
-  // Reset preview area for next load
-  document.getElementById('preview-area').style.display = 'none';
+  // Reset preview
+  document.getElementById('preview-area').style.display     = 'none';
   document.getElementById('load-confirm-btn').style.display = 'none';
   document.getElementById('file-input').value = '';
 
-  showGameArea();
   initGame();
   updateScoreBar();
-  showStartScreen();
+
+  if (showStart) {
+    // Sync start screen UI with current state
+    document.getElementById('start-q-count').textContent   = pairs.length;
+    document.getElementById('start-timer-toggle').checked  = State.timer.enabled;
+    document.getElementById('start-timer-options').style.display = State.timer.enabled ? 'block' : 'none';
+    updateStartTimerDisplay();
+    showStartScreen();
+  }
+
   showToast(`✅ ${pairs.length} pares cargados`);
 }
 
@@ -205,7 +209,7 @@ function loadPairs(pairs) {
 function on(id, event, fn) {
   const el = document.getElementById(id);
   if (el) el.addEventListener(event, fn);
-  else console.warn(`[main] Element #${id} not found`);
+  else console.warn(`[main] #${id} not found`);
 }
 
 function fmtSecs(s) {
