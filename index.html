@@ -16,16 +16,13 @@
 <div class="bg-blob bg-blob--cyan" aria-hidden="true"></div>
 <canvas id="confetti-canvas" aria-hidden="true"></canvas>
 
-<!-- ═══════════════════════════════════════
-     START SCREEN — con config de tiempo
-     ═══════════════════════════════════════ -->
+<!-- START SCREEN -->
 <div class="start-screen" id="start-screen" role="dialog" aria-modal="true">
   <div class="start-card">
     <span class="start-card__icon">🧩</span>
     <h2 class="start-card__title">MatchIt</h2>
     <p class="start-card__sub">Arrastra cada respuesta a la pregunta correcta antes de que se acabe el tiempo.</p>
 
-    <!-- Stats -->
     <div class="start-card__info">
       <div class="start-info-stat">
         <div class="start-info-stat__num" id="start-q-count">0</div>
@@ -46,9 +43,8 @@
         </label>
         Activar temporizador
       </div>
-
       <div id="start-timer-options" class="start-timer-options" style="display:none">
-        <div class="timer-presets" style="justify-content:center; margin-bottom:10px">
+        <div class="timer-presets" style="justify-content:center;margin-bottom:10px">
           <button class="timer-preset" data-secs="30">30s</button>
           <button class="timer-preset" data-secs="60">1 min</button>
           <button class="timer-preset timer-preset--active" data-secs="120">2 min</button>
@@ -56,8 +52,8 @@
           <button class="timer-preset" data-secs="300">5 min</button>
         </div>
         <div class="timer-custom" style="justify-content:center">
-          <label for="start-timer-custom" style="font-size:.82rem; color:var(--text-muted)">O ingresa minutos:</label>
-          <input type="number" id="start-timer-custom" min="1" max="120" value="2" style="width:70px; text-align:center">
+          <label for="start-timer-custom" style="font-size:.82rem;color:var(--text-muted)">O ingresa minutos:</label>
+          <input type="number" id="start-timer-custom" min="1" max="120" value="2" style="width:70px;text-align:center">
         </div>
       </div>
     </div>
@@ -68,12 +64,8 @@
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════
-     MAIN APP
-     ═══════════════════════════════════════ -->
+<!-- MAIN APP -->
 <main class="app">
-
-  <!-- Header -->
   <header class="header">
     <div class="logo">
       Match<span class="logo__accent">It</span>
@@ -129,7 +121,7 @@
     </div>
   </div>
 
-  <!-- Game area -->
+  <!-- Game -->
   <section id="game-wrap">
     <div class="game-area">
       <div>
@@ -151,7 +143,6 @@
       <div id="feedback-items"></div>
     </section>
   </section>
-
 </main>
 
 <!-- MODAL: Load CSV -->
@@ -196,6 +187,7 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script type="module" src="js/main.js"></script>
+<!-- UN solo script, sin módulos ES — funciona en cualquier entorno -->
+<script src="js/app.js"></script>
 </body>
 </html>
