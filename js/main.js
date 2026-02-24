@@ -4,7 +4,7 @@
  */
 
 import { State, reshuffle, stopTimer } from './state.js';
-import { parseCSV, downloadTemplate, DEMO_PAIRS } from './data.js';
+import { parseCSV, downloadTemplate, DEMO_PAIRS, DEFAULT_PAIRS } from './data.js';
 import { initGame, resetGame, shuffleAnswers, checkAnswers } from './game.js';
 import { initTimer, renderTimer, beginCountdown } from './timer.js';
 import {
@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
   wireAllModals();
   wireFileDrop();
   wireTimerConfig();
-  showEmptyState();
+  loadPairs([...DEFAULT_PAIRS]);
 });
 
 // ── Buttons ────────────────────────────────────────────
